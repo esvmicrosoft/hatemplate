@@ -1,0 +1,125 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "utcValue": {
+      "type": "string",
+      "defaultValue": "[utcNow()]"
+    },
+    "storagePrefix": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 3,
+      "defaultValue": "esv"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "hostnames": {
+      "type": "string",
+      "defaultValue": "node"
+    },
+    "publisher": {
+      "type": "string",
+      "defaultValue": "SUSE"
+    },
+    "offer":  {
+      "type": "string",
+      "defaultValue": "sles-sap-15-sp4"
+    },
+    "sku": {
+      "type": "string",
+      "defaultValue": "gen2"
+    },
+    "image_version": {
+      "type": "string",
+      "defaultValue": "latest"
+    },
+    "tenantId": {
+      "type": "string",
+      "defaultValue": "[subscription().tenantId]",
+      "metadata": {
+        "description": "Specifies the Azure AD tenant ID that should be used for authenticating requests to the key vault"
+      }
+    }
+  },
+  "variables": {
+    "uniqueName": "[toLower(concat(parameters('storagePrefix'), 'diag', parameters('utcValue')))]",
+    "numberOfNodes": 2
+  },
+  "resources": 
+ [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-09-01",
+      "name":  "[variables('uniqueName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+         "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+         "supportsHttpsTrafficOnly": true
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2022-07-01",
+      "name": "[variables('uniqueName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "accessPolicies": [
+         {
+                "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                "objectId": "7bc11cb5-11ed-4aed-8926-3f4f7b66c28a",
+                "permissions": {
+                    "keys": [],
+                    "secrets": [
+                        "Backup",
+                        "Delete",
+                        "Get",
+                        "List",
+                        "Purge",
+                        "Recover",
+                        "Restore",
+                        "Set"
+                    ],
+                    "certificates": [],
+                    "storage": []
+                }
+           }
+        ],
+        "createMode": "default",
+        "enabledForDeployment":        true,
+        "enabledForTemplateDeploymen": true,
+        "enableSoftDelete":            false,
+        "enableRbacAuthorization":     false,
+        "sku": {
+          "family": "A",
+          "name":   "standard"
+        },
+        "tenantId": "[parameters('tenantId')]"
+      }
+    },
+    {
+      "type": "Microsoft.Compute/disks",
+      "apiVersion": "2022-07-02",
+      "name": "sbd0",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "StandardSSD_LRS",
+        "tier": "Standard"
+      },
+      "properties": {
+        "creationData": {
+          "createOption": "Empty"
+        },
+        "diskSizeGB": 4,
+        "maxShares": 2,
+        "networkAccessPolicy": "AllowAll",
+        "publicNetworkAccess": "Enabled"
+      }
+    }
+  ]
+}
