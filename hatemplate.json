@@ -6,6 +6,7 @@
       "type": "string",
       "defaultValue": "node"
     },
+
     "adminUsername": {
       "type": "string",
       "metadata": {
@@ -37,6 +38,67 @@
         "description": "Unique DNS Name for the Public IP used to access the Virtual Machine."
       }
     },
+
+    "hostnames": {
+      "type": "string",
+      "defaultValue": "node"
+    },
+
+    "publisher": {
+      "type": "string",
+      "defaultValue": "SUSE"
+    },
+
+    "offer":  {
+      "type": "string",
+      "defaultValue": "sles-sap-15-sp4"
+    },
+    
+    "sku": {
+      "type": "string",
+      "defaultValue": "gen2"
+    },
+
+    "image_version": {
+      "type": "string",
+      "defaultValue": "latest"
+    },
+
+    "nodes_customdata": {
+      "type": "string",
+      "defaultValue": "I2Nsb3VkLWNvbmZpZwo="
+    },
+
+
+    "jump_publisher": {
+      "type": "string",
+      "defaultValue": "Canonical"
+    },
+
+    "jump_offer":  {
+      "type": "string",
+      "defaultValue": "0001-com-ubuntu-server-jammy"
+    },
+    
+    "jump_sku": {
+      "type": "string",
+      "defaultValue": "22_04-lts-gen2"
+    },
+
+    "jump_image_version": {
+      "type": "string",
+      "defaultValue": "latest"
+    },
+
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v5",
+      "metadata": {
+        "description": "Size of the virtual machine."
+      }
+    },
+
+
     "publicIpName": {
       "type": "string",
       "defaultValue": "myPublicIP",
@@ -55,6 +117,7 @@
         "description": "Allocation method for the Public IP used to access the Virtual Machine."
       }
     },
+
     "publicIpSku": {
       "type": "string",
       "defaultValue": "Basic",
@@ -66,13 +129,8 @@
         "description": "SKU for the Public IP used to access the Virtual Machine."
       }
     },
-    "vmSize": {
-      "type": "string",
-      "defaultValue": "Standard_D2s_v5",
-      "metadata": {
-        "description": "Size of the virtual machine."
-      }
-    },
+
+
     "location": {
       "type": "string",
       "defaultValue": "[resourceGroup().location]",
@@ -80,6 +138,7 @@
         "description": "Location for all resources."
       }
     },
+
     "utcValue": {
       "type": "string",
       "defaultValue": "[utcNow()]"
@@ -90,26 +149,7 @@
       "maxLength": 3,
       "defaultValue": "esv"
     },
-    "hostnames": {
-      "type": "string",
-      "defaultValue": "node"
-    },
-    "publisher": {
-      "type": "string",
-      "defaultValue": "SUSE"
-    },
-    "offer":  {
-      "type": "string",
-      "defaultValue": "sles-sap-15-sp4"
-    },
-    "sku": {
-      "type": "string",
-      "defaultValue": "gen2"
-    },
-    "image_version": {
-      "type": "string",
-      "defaultValue": "latest"
-    },
+
     "tenantId": {
       "type": "string",
       "defaultValue": "[subscription().tenantId]",
@@ -117,6 +157,7 @@
         "description": "Specifies the Azure AD tenant ID that should be used for authenticating requests to the key vault"
       }
     },
+
     "securityType": {
       "type": "string",
       "defaultValue": "TrustedLaunch",
@@ -128,12 +169,24 @@
         "description": "Security Type of the Virtual Machine."
       }
     }
+
   }, 
+
+
   "variables": {
     "uniqueName": "[toLower(concat(parameters('storagePrefix'), 'diag', uniqueString(resourceGroup().id)))]",
     "numberOfNodes": 2,
-    "nicName": "myVMNic",
+
+    "virtualNetworkName": "myvnet",
     "addressPrefix": "10.0.0.0/16",
+
+    "subnetName": "default",
+    "subnetPrefix": "10.0.0.0/24",
+
+    "nicName": "myVMNic",
+
+    "networkSecurityGroupName": "default-NSG",
+
     "linuxConfiguration": {
       "disablePasswordAuthentication": true,
       "ssh": {
@@ -145,10 +198,6 @@
         ]
       }
     },
-    "subnetName": "default",
-    "subnetPrefix": "10.0.0.0/24",
-    "virtualNetworkName": "myvnet",
-    "networkSecurityGroupName": "default-NSG",
     "securityProfileJson": {
       "uefiSettings": {
         "secureBootEnabled": true,
@@ -157,6 +206,7 @@
       "securityType": "[parameters('securityType')]"
     }
   },
+
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
@@ -171,25 +221,8 @@
          "supportsHttpsTrafficOnly": true
       }
     },
-    {
-      "type": "Microsoft.Network/publicIPAddresses",
-      "apiVersion": "2022-05-01",
-      "name": "[format('{0}{1}',parameters('publicIpName'),copyIndex())]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "[parameters('publicIpSku')]"
-      },
-      "properties": {
-        "publicIPAllocationMethod": "[parameters('publicIPAllocationMethod')]",
-        "dnsSettings": {
-          "domainNameLabel": "[format('a{0}{1}',copyIndex(), parameters('dnsLabelPrefix'))]"
-        }
-      },
-      "copy": {
-        "name": "IPAddressCopy",
-        "count": "[variables('numberOfNodes')]"
-      }
-    },
+
+
     {
       "type": "Microsoft.Network/networkSecurityGroups",
       "apiVersion": "2022-05-01",
@@ -240,6 +273,110 @@
         "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
       ]
     },
+
+
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2022-05-01",
+      "name": "[parameters('publicIpName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('publicIpSku')]"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "[parameters('publicIPAllocationMethod')]",
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('dnsLabelPrefix')]"
+        }
+      }
+    },
+
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2022-05-01",
+      "name": "[concat('jumphost_',variables('nicName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName'))]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses',parameters('publicIpName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+      ]
+    },
+
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2022-03-01",
+      "name": "jumphost",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+
+        "osProfile": {
+          "computerName": "jumphost",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPasswordOrKey')]",
+          "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'password'), null(), variables('linuxConfiguration'))]"
+
+        },
+
+
+        "storageProfile": { 
+          "imageReference": { 
+            "publisher":      "[parameters('jump_publisher')]",
+            "offer":          "[parameters('jump_offer')]",
+            "sku":            "[parameters('jump_sku')]",
+            "version":        "[parameters('jump_image_version')]"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            }
+          },
+          "dataDisks": []
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat('jumphost_',variables('nicName')))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName')), '2022-05-01').primaryEndpoints.blob]"
+          }
+        },
+        "securityProfile": "[if(equals(parameters('securityType'), 'TrustedLaunch'), variables('securityProfileJson'), null())]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', concat('jumphost_',variables('nicName')))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName'))]"
+      ]
+    },
+
+
     {
       "type": "Microsoft.Network/networkInterfaces",
       "apiVersion": "2022-05-01",
@@ -251,9 +388,6 @@
             "name": "ipconfig1",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}{1}',parameters('publicIpName'),copyIndex()))]"
-              },
               "subnet": {
                 "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
               }
@@ -266,27 +400,50 @@
         "count": "[variables('numberOfNodes')]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/publicIPAddresses',format('{0}{1}',parameters('publicIpName'),copyIndex()))]",
         "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
       ]
     },
+
+
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "apiVersion": "2022-11-01",
+      "name": "hacluster-avset",
+      "location": "[parameters('location')]",
+      "properties": {
+        "platformFaultDomainCount": 2
+      },
+      "sku": {
+        "name": "Aligned"
+      }
+    },
+
+
     {
       "type": "Microsoft.Compute/virtualMachines",
       "apiVersion": "2022-03-01",
       "name": "[format('{0}{1}',parameters('vmName'),copyIndex())]",
       "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "properties": {
+        "availabilitySet": {
+          "id":  "[resourceId('Microsoft.Compute/availabilitySets', 'hacluster-avset')]"
+        },
         "hardwareProfile": {
           "vmSize": "[parameters('vmSize')]"
         },
 
         "osProfile": {
-          "computerName": "[parameters('vmName')]",
+          "computerName": "[concat(parameters('vmName'),copyIndex())]",
           "adminUsername": "[parameters('adminUsername')]",
           "adminPassword": "[parameters('adminPasswordOrKey')]",
           "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'password'), null(), variables('linuxConfiguration'))]"
 
-        },
+        }, 
+
+
         "storageProfile": { 
           "imageReference": { 
             "publisher":      "[parameters('publisher')]",
@@ -301,7 +458,7 @@
             }
           },
           "dataDisks": []
-        },
+        }, 
         "networkProfile": {
           "networkInterfaces": [
             {
@@ -315,7 +472,8 @@
             "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName')), '2022-05-01').primaryEndpoints.blob]"
           }
         },
-        "securityProfile": "[if(equals(parameters('securityType'), 'TrustedLaunch'), variables('securityProfileJson'), null())]"
+        "securityProfile": "[if(equals(parameters('securityType'), 'TrustedLaunch'), variables('securityProfileJson'), null())]",
+        "userData": "[parameters('nodes_customdata')]"
       },
       "copy": {
         "name": "copyOfNodes",
@@ -326,6 +484,7 @@
         "[resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName'))]"
       ]
     },
+
     {
       "type": "Microsoft.KeyVault/vaults",
       "apiVersion": "2022-07-01",
@@ -333,25 +492,39 @@
       "location": "[parameters('location')]",
       "properties": {
         "accessPolicies": [
-         {
-                "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
-                "objectId": "7bc11cb5-11ed-4aed-8926-3f4f7b66c28a",
-                "permissions": {
-                    "keys": [],
-                    "secrets": [
-                        "Backup",
-                        "Delete",
-                        "Get",
-                        "List",
-                        "Purge",
-                        "Recover",
-                        "Restore",
-                        "Set"
-                    ],
-                    "certificates": [],
-                    "storage": []
-                }
-           }
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "7bc11cb5-11ed-4aed-8926-3f4f7b66c28a",
+            "permissions": {
+              "keys": [],
+              "secrets": [
+                "Backup",
+                "Delete",
+                "Get",
+                "List",
+                "Purge",
+                "Recover",
+                "Restore",
+                "Set"
+              ],
+              "certificates": [],
+              "storage": []
+            }
+          },
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Compute/virtualMachines','jumphost'), '2023-03-01', 'Full').identity.principalId]",
+            "permissions": {
+              "keys": [],
+              "secrets": [
+                "Get",
+                "List",
+                "Set"
+              ],
+              "certificates": [],
+              "storage": []
+            }
+          }
         ],
         "createMode": "default",
         "enabledForDeployment":        true,
@@ -365,6 +538,9 @@
         "tenantId": "[parameters('tenantId')]"
       }
     },
+
+
+
     {
       "type": "Microsoft.Compute/disks",
       "apiVersion": "2022-07-02",
