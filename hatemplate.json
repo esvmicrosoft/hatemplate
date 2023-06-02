@@ -69,6 +69,11 @@
       "defaultValue": "I2Nsb3VkLWNvbmZpZwo="
     },
 
+    "jumphost_customdata": {
+      "type": "string",
+      "defaultValue": "I2Nsb3VkLWNvbmZpZwo="
+    },
+
 
     "jump_publisher": {
       "type": "string",
@@ -108,7 +113,7 @@
     },
     "publicIPAllocationMethod": {
       "type": "string",
-      "defaultValue": "Dynamic",
+      "defaultValue": "Static",
       "allowedValues": [
         "Dynamic",
         "Static"
@@ -120,7 +125,7 @@
 
     "publicIpSku": {
       "type": "string",
-      "defaultValue": "Basic",
+      "defaultValue": "Standard",
       "allowedValues": [
         "Basic",
         "Standard"
@@ -128,6 +133,14 @@
       "metadata": {
         "description": "SKU for the Public IP used to access the Virtual Machine."
       }
+    },
+
+    "privkey":  {
+      "type": "string"
+    },
+
+    "pubkey":  {
+      "type": "string"
     },
 
 
@@ -183,6 +196,7 @@
     "subnetName": "default",
     "subnetPrefix": "10.0.0.0/24",
 
+    "loadBalancerName": "ilb",
     "nicName": "myVMNic",
 
     "networkSecurityGroupName": "default-NSG",
@@ -262,6 +276,9 @@
             "name": "[variables('subnetName')]",
             "properties": {
               "addressPrefix": "[variables('subnetPrefix')]",
+              "natGateway": {
+                "id": "[resourceId('Microsoft.Network/natGateways','natgateway')]"
+              },
               "networkSecurityGroup": {
                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
               }
@@ -270,6 +287,7 @@
         ]
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Network/natGateways','natgateway')]",
         "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
       ]
     },
@@ -321,7 +339,7 @@
     {
       "type": "Microsoft.Compute/virtualMachines",
       "apiVersion": "2022-03-01",
-      "name": "jumphost",
+      "name": "[variables('uniqueName')]",
       "location": "[parameters('location')]",
       "identity": {
         "type": "SystemAssigned"
@@ -332,7 +350,7 @@
         },
 
         "osProfile": {
-          "computerName": "jumphost",
+          "computerName": "[variables('uniqueName')]",
           "adminUsername": "[parameters('adminUsername')]",
           "adminPassword": "[parameters('adminPasswordOrKey')]",
           "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'password'), null(), variables('linuxConfiguration'))]"
@@ -368,11 +386,77 @@
             "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName')), '2022-05-01').primaryEndpoints.blob]"
           }
         },
-        "securityProfile": "[if(equals(parameters('securityType'), 'TrustedLaunch'), variables('securityProfileJson'), null())]"
+        "securityProfile": "[if(equals(parameters('securityType'), 'TrustedLaunch'), variables('securityProfileJson'), null())]",
+        "userData": "[parameters('jumphost_customdata')]"
+
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', concat('jumphost_',variables('nicName')))]",
+        "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}',parameters('vmname'),0))]",
+        "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}',parameters('vmname'),1))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName'))]"
+      ]
+    },
+
+
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2022-05-01",
+      "name": "natgw-ipaddress",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('publicIpSku')]"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "[parameters('publicIPAllocationMethod')]",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('uniqueName')]"
+        }
+      }
+    },
+
+    {
+      "type": "Microsoft.Network/natGateways",
+      "apiVersion": "2022-07-01",
+      "name":  "natgateway",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "idleTimeoutInMinutes": 10,
+        "publicIpAddresses": [ 
+          {
+            "id": "[resourceId('Microsoft.Network/publicIPAddresses','natgw-ipaddress')]"
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses','natgw-ipaddress')]"
+      ]
+    },
+
+    {
+      "type": "Microsoft.Network/routeTables",
+      "apiVersion": "2022-07-01",
+      "name":  "custom_udr_table",
+      "location": "[parameters('location')]",
+      "properties": {
+        "disableBgpRoutePropagation": false,
+        "routes": [
+          {
+            "type": "Microsoft.Network/routeTables/routes",
+            "name": "tothenatgw",
+            "properties": {
+              "addressPrefix": "[format('{0}/32',reference(resourceId('Microsoft.Network/publicIPAddresses','natgw-ipaddress'),'2019-02-01', 'Full').properties.ipAddress)]",
+              "nextHopType": "Internet"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses','natgw-ipaddress')]"
       ]
     },
 
@@ -390,7 +474,12 @@
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
                 "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
-              }
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('loadBalancerName'), 'BackendPool1')]"
+                }
+              ]
             }
           }
         ]
@@ -398,6 +487,73 @@
       "copy": {
         "name": "CopyOfNics",
         "count": "[variables('numberOfNodes')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
+      ]
+    },
+
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2021-05-01",
+      "name": "[variables('loadBalancerName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "properties": {
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
+              },
+              "privateIPAddress": "10.0.0.254",
+              "privateIPAllocationMethod": "Static"
+            },
+            "name": "LoadBalancerFrontend"
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "BackendPool1"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', variables('loadBalancerName'), 'LoadBalancerFrontend')]"
+              },
+              "frontendPort": 0,
+              "backendPort": 0,
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": 15,
+              "protocol": "All",
+              "loadDistribution": "Default",
+              "disableOutboundSnat": false,
+              "backendAddressPool": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('loadBalancerName'), 'BackendPool1')]"
+              },
+              "probe": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', variables('loadBalancerName'), 'lbprobe')]"
+              }
+            },
+            "name": "lbrule"
+          }
+        ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 80,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe"
+          }
+        ]
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]"
@@ -457,7 +613,32 @@
               "storageAccountType": "StandardSSD_LRS"
             }
           },
-          "dataDisks": []
+          "dataDisks": [
+            {
+              "lun": 0,
+              "name": "sbd0",
+              "createOption": "Attach",
+              "caching": "None",
+              "writeAcceleratorEnabled": false,
+              "managedDisk": {
+                "id": "[resourceId('Microsoft.Compute/disks','sbd0')]"
+              },
+              "deleteOption": "Detach",
+              "toBeDetached": false
+            },
+            {
+              "lun": 1,
+              "name": "[concat('dataDisk', copyIndex())]",
+              "createOption": "Attach",
+              "caching": "None",
+              "writeAcceleratorEnabled": false,
+              "managedDisk": {
+                "id": "[resourceId('Microsoft.Compute/disks',concat('dataDisk',copyIndex()))]"
+              },
+              "deleteOption": "Detach",
+              "toBeDetached": false
+            }
+          ]
         }, 
         "networkProfile": {
           "networkInterfaces": [
@@ -510,20 +691,6 @@
               "certificates": [],
               "storage": []
             }
-          },
-          {
-            "tenantId": "[subscription().tenantId]",
-            "objectId": "[reference(resourceId('Microsoft.Compute/virtualMachines','jumphost'), '2023-03-01', 'Full').identity.principalId]",
-            "permissions": {
-              "keys": [],
-              "secrets": [
-                "Get",
-                "List",
-                "Set"
-              ],
-              "certificates": [],
-              "storage": []
-            }
           }
         ],
         "createMode": "default",
@@ -536,7 +703,140 @@
           "name":   "standard"
         },
         "tenantId": "[parameters('tenantId')]"
-      }
+      },
+      "resources": [
+        {
+          "type": "secrets",
+          "apiVersion": "2022-07-01",
+          "name": "serviceip",
+          "properties": {
+            "attributes": {
+              "enabled": true
+            },
+            "value":  "10.0.0.254"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
+          ]
+        },
+
+        {
+          "type": "secrets",
+          "apiVersion": "2022-07-01",
+          "name": "resourcegroup",
+          "properties": {
+            "attributes": {
+              "enabled": true
+            },
+            "value":  "[resourceGroup().name]"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
+          ]
+        },
+    
+        {
+          "type": "secrets",
+          "apiVersion": "2022-07-01",
+          "name": "subscriptionid",
+          "properties": {
+            "attributes": {
+              "enabled": true
+            },
+            "value":  "[subscription().id]"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
+          ]
+        },
+        {
+          "type": "secrets",
+          "apiVersion": "2022-07-01",
+          "name": "firstnode",
+          "properties": {
+            "attributes": {
+              "enabled": true
+            },
+            "value":  "node0"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
+          ]
+        },
+    
+        {
+          "type": "secrets",
+          "apiVersion": "2022-07-01",
+          "name": "machineslist",
+          "properties": {
+            "attributes": {
+              "enabled": true
+            },
+            "value":  "node0,node1"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
+          ]
+        },
+    
+        {
+          "type": "secrets",
+          "apiVersion": "2022-07-01",
+          "name": "privkey",
+          "properties": {
+            "attributes": {
+              "enabled": true
+            },
+            "value":  "[parameters('privkey')]"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
+          ]
+        },
+        {
+          "type": "secrets",
+          "apiVersion": "2022-07-01",
+          "name": "pubkey",
+          "properties": {
+            "attributes": {
+              "enabled": true
+            },
+            "value":  "[parameters('pubkey')]"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
+          ]
+        }
+    
+      ]
+    },
+
+    {
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/{1}',variables('uniqueName'),'add')]",
+      "properties": {
+        "accessPolicies": [
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Compute/virtualMachines',variables('uniqueName')), '2023-03-01', 'Full').identity.principalId]",
+            "permissions": {
+              "keys": [],
+              "secrets": [
+                "Get",
+                "List",
+                "Set"
+              ],
+              "certificates": [],
+              "storage": []
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]",
+        "[resourceId('Microsoft.Compute/virtualMachines',variables('uniqueName'))]"
+      ]
     },
 
 
@@ -558,6 +858,30 @@
         "maxShares": 2,
         "networkAccessPolicy": "AllowAll",
         "publicNetworkAccess": "Enabled"
+      }
+    },
+
+    {
+      "type": "Microsoft.Compute/disks",
+      "apiVersion": "2022-07-02",
+      "name": "[concat('dataDisk',copyIndex())]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "StandardSSD_LRS",
+        "tier": "Standard"
+      },
+      "properties": {
+        "creationData": {
+          "createOption": "Empty"
+        },
+        "diskSizeGB": 4,
+        "maxShares": 1,
+        "networkAccessPolicy": "AllowAll",
+        "publicNetworkAccess": "Enabled"
+      },
+      "copy": {
+        "name": "CopyOfDisks",
+        "count": "[variables('numberOfNodes')]"
       }
     }
   ]
