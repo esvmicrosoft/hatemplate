@@ -97,7 +97,7 @@
 
     "vmSize": {
       "type": "string",
-      "defaultValue": "Standard_D2s_v5",
+      "defaultValue": "Standard_D2s_v3",
       "metadata": {
         "description": "Size of the virtual machine."
       }
@@ -187,6 +187,7 @@
 
 
   "variables": {
+    "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions','9980e02c-c2be-4d73-94e8-173b1dc7cf3c')]",
     "uniqueName": "[toLower(concat(parameters('storagePrefix'), 'diag', uniqueString(resourceGroup().id)))]",
     "numberOfNodes": 2,
 
@@ -662,6 +663,8 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'),copyIndex()))]",
+        "[resourceId('Microsoft.Compute/disks','sbd0')]",
+        "[resourceId('Microsoft.Compute/disks',concat('dataDisk',copyIndex()))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName'))]"
       ]
     },
