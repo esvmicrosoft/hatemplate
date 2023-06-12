@@ -6,11 +6,11 @@
       "type": "string",
       "defaultValue": "node"
     },
-###############################################################################################################################
-#
-#  VM related parameters 
-# 
-###############################################################################################################################
+/////////////////////////////////////
+//
+//  VM related parameters 
+//
+/////////////////////////////////////
 
     "adminUsername": {
       "type": "string",
@@ -67,9 +67,11 @@
       "defaultValue": "I2Nsb3VkLWNvbmZpZwo="
     },
 
-#####################################################
-# jumpserver sku definition
-#####################################################
+/////////////////////////////////////
+//
+// jumpserver sku definition
+//
+/////////////////////////////////////
 
     "jump_publisher": {
       "type": "string",
@@ -99,10 +101,11 @@
       }
     },
 
-###############################################################################################################################
-# Networking related parameters
-#
-###############################################################################################################################
+/////////////////////////////////////
+//
+// Networking related parameters
+//
+/////////////////////////////////////
 
     "publicIpName": {
       "type": "string",
@@ -143,8 +146,11 @@
       "type": "string"
     },
 
-###############################################################################################################################
-###############################################################################################################################
+/////////////////////////////////////
+//
+// General settings
+//
+/////////////////////////////////////
 
     "location": {
       "type": "string",
@@ -187,13 +193,14 @@
 
   }, 
 
-############ 
-# Network 
-################
+/////////////////////////////////////
+//
+// Network 
+//
+/////////////////////////////////////
 
   "variables": {
     "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions','9980e02c-c2be-4d73-94e8-173b1dc7cf3c')]",
-#    "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions','b24988ac-6180-42a0-ab88-20f7382dd24c')]",
     "uniqueName": "[toLower(concat(parameters('storagePrefix'), 'diag', uniqueString(resourceGroup().id)))]",
     "numberOfNodes": 2,
 
@@ -243,9 +250,11 @@
       }
     },
 
-#######################################
-# Network settings 
-#######################################
+/////////////////////////////////////
+//
+// Network settings 
+//
+/////////////////////////////////////
 
     {
       "type": "Microsoft.Network/networkSecurityGroups",
@@ -302,13 +311,15 @@
       ]
     },
 
-#######################################
-# Network settings  ^^^^^
-#######################################
-#
-#     jumphost 
-#
-#######################################
+///////////////////////////////////////
+//
+// Network settings  ^^^^^
+//
+///////////////////////////////////////
+//
+//     jumphost 
+//
+///////////////////////////////////////
 
     {
       "type": "Microsoft.Network/publicIPAddresses",
@@ -410,24 +421,23 @@
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', concat('jumphost_',variables('nicName')))]",
         "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}',parameters('vmname'),0))]",
-#        "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}',parameters('vmname'),1))]",
         "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName'))]"
       ]
     },
 
-#######################################
-#
-# Jump Host resources         ^^^^^^^^^
-#                             |||||||||
-#
-#######################################
+///////////////////////////////////////
+//
+// Jump Host resources         ^^^^^^^^^
+//                             |||||||||
+//
+///////////////////////////////////////
 
-#############################################
-#
-#  LOAD BALANCER     VVVVVVVVVVVVVVVVVVVVVVV
-#
-#############################################
+///////////////////////////////////////
+//
+//  LOAD BALANCER     VVVVVVVVVVVVVVVVVVVVVVV
+//
+///////////////////////////////////////
     {
       "type": "Microsoft.Network/publicIPAddresses",
       "apiVersion": "2022-05-01",
@@ -588,12 +598,12 @@
       ]
     },
 
-##############################################################
-##
-##                 |||||||||||||||||
-##    HA Nodes     vvvvvvvvvvvvvvvvv
-## 
-##############################################################
+///////////////////////////////////////
+//
+//                 |||||||||||||||||
+//    HA Nodes     vvvvvvvvvvvvvvvvv
+// 
+///////////////////////////////////////
 
     {
       "type": "Microsoft.Compute/availabilitySets",
@@ -607,8 +617,6 @@
         "name": "Aligned"
       }
     },
-
-##############################################################
 
     {
       "type": "Microsoft.Compute/virtualMachines",
@@ -703,11 +711,11 @@
       ]
     },
 
-########################################
-#
-#  keyvault
-#
-########################################
+///////////////////////////////////////
+//
+//  keyvault
+//
+///////////////////////////////////////
     {
       "type": "Microsoft.KeyVault/vaults",
       "apiVersion": "2022-07-01",
@@ -772,7 +780,7 @@
             "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
           ]
         },
-    #
+  
         {
           "type": "secrets",
           "apiVersion": "2022-07-01",
@@ -803,7 +811,7 @@
           ]
         },
     
-    #
+   
         {
           "type": "secrets",
           "apiVersion": "2022-07-01",
@@ -818,7 +826,7 @@
             "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
           ]
         },
-    #
+    
         {
           "type": "secrets",
           "apiVersion": "2022-07-01",
@@ -866,11 +874,11 @@
     },
 
 
-########################################
-#
-#  shared disks 
-#
-########################################
+///////////////////////////////////////
+//
+//  shared disks 
+//
+///////////////////////////////////////
 
     {
       "type": "Microsoft.Compute/disks",
@@ -923,9 +931,6 @@
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
       "name": "[guid(concat(variables('roleDefinitionId'),resourceGroup().id,format('{0}',copyIndex())))]",
-#      "name": "[guid(concat(subscription().id, variables('roleDefinitionId'), resourceGroup().id,format('{0}',copyIndex())))]",
-#      "name": "[guid(subscription().id, variables('roleDefinitionId'), format('{0}',copyIndex()))]",
-#      "scope": "['/']",
       "properties": {
         "roleDefinitionId": "[variables('roleDefinitionId')]",
         "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines',format('{0}{1}',parameters('vmname'),copyIndex())), '2023-03-01', 'Full').identity.principalId]",

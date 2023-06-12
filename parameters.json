@@ -5,11 +5,6 @@
     "adminUsername": {
       "value": "azureuser"
     },
-    "privkey": {
-      "value": ""},
-    "pubkey": {
-      "value":  ""
-    },
     "nodes_customdata": {
       "value": "I2Nsb3VkLWNvbmZpZwoKYm9vdGNtZDoKICAtIHVudGlsIFsgLWUgL2Rldi9kaXNrL2F6dXJlL3Njc2kxL2x1bjAgXTsgZG8gc2xlZXAgNTsgZG9uZQoKcGFja2FnZXM6CiAgLSBweXRob24zLWF6dXJlLWlkZW50aXR5CiAgLSBweXRob24zLWF6dXJlLWtleXZhdWx0CiAgLSBweXRob24zLWF6dXJlLWtleXZhdWx0LWFkbWluaXN0cmF0aW9uCiAgLSBweXRob24zLWF6dXJlLWtleXZhdWx0LWNlcnRpZmljYXRlcwogIC0gcHl0aG9uMy1henVyZS1rZXl2YXVsdC1rZXlzCiAgLSBweXRob24zLWF6dXJlLWtleXZhdWx0LW5zcGtnCiAgLSBweXRob24zLWF6dXJlLWtleXZhdWx0LXNlY3JldHMKICAtIHB5dGhvbjMtYXp1cmUtbWdtdC1rZXl2YXVsdAogIC0gZHJiZAogIC0gZHJiZC1rbXAtZGVmYXVsdAogIC0gZHJiZC11dGlscwogIC0gYXBhY2hlMgoKCgo="
     },
