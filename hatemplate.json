@@ -39,11 +39,6 @@
       }
     },
 
-    "hostnames": {
-      "type": "string",
-      "defaultValue": "node"
-    },
-
     "publisher": {
       "type": "string",
       "defaultValue": "SUSE"
@@ -187,7 +182,7 @@
 
 
   "variables": {
-    "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions','9980e02c-c2be-4d73-94e8-173b1dc7cf3c')]",
+    "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions','9980e02c-c2be-4d73-94e8-173b1dc7cf3c')]",
     "uniqueName": "[toLower(concat(parameters('storagePrefix'), 'diag', uniqueString(resourceGroup().id)))]",
     "numberOfNodes": 2,
 
@@ -394,7 +389,6 @@
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', concat('jumphost_',variables('nicName')))]",
         "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}',parameters('vmname'),0))]",
-        "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}',parameters('vmname'),1))]",
         "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName'))]"
       ]
@@ -676,25 +670,6 @@
       "location": "[parameters('location')]",
       "properties": {
         "accessPolicies": [
-          {
-            "tenantId": "[subscription().tenantId]",
-            "objectId": "7bc11cb5-11ed-4aed-8926-3f4f7b66c28a",
-            "permissions": {
-              "keys": [],
-              "secrets": [
-                "Backup",
-                "Delete",
-                "Get",
-                "List",
-                "Purge",
-                "Recover",
-                "Restore",
-                "Set"
-              ],
-              "certificates": [],
-              "storage": []
-            }
-          }
         ],
         "createMode": "default",
         "enabledForDeployment":        true,
@@ -746,7 +721,7 @@
             "attributes": {
               "enabled": true
             },
-            "value":  "[subscription().id]"
+            "value":  "[subscription().subscriptionId]"
           },
           "dependsOn": [
             "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]"
@@ -885,7 +860,29 @@
       "copy": {
         "name": "CopyOfDisks",
         "count": "[variables('numberOfNodes')]"
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/disks','sbd0')]"
+      ]
+    },
+
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(concat(variables('roleDefinitionId'),resourceGroup().id,format('{0}',copyIndex())))]",
+      "properties": {
+        "roleDefinitionId": "[variables('roleDefinitionId')]",
+        "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines',format('{0}{1}',parameters('vmname'),copyIndex())), '2023-03-01', 'Full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "copy": {
+        "name": "CopyOfRoles",
+        "count": "[variables('numberOfNodes')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]",
+        "[resourceId('Microsoft.Compute/virtualMachines',format('{0}{1}',parameters('vmname'),copyIndex()))]"
+      ]
     }
   ]
 }
