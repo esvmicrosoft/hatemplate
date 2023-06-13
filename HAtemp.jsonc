@@ -179,6 +179,10 @@
       }
     },
 
+    "myipaddress": {
+      "type": "string"
+    },
+
     "securityType": {
       "type": "string",
       "defaultValue": "TrustedLaunch",
@@ -272,7 +276,7 @@
               "destinationPortRange": "22",
               "protocol": "Tcp", 
               "sourcePortRange": "*",
-              "sourceAddressPrefix": "74.124.178.154/32", 
+              "sourceAddressPrefix": "[concat(parameters('myipaddress'),'/32')]", 
               "destinationAddressPrefix": "*"
             }
           }
