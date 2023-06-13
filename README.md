@@ -10,10 +10,10 @@ export rg=clusterrg
 export location=eastus
 
 ssh-keygen -t rsa -b 2048 -N"" -f azureuser_key
-priv_key=$(cat azureuser_key)
-pub_key=$(cat azureuser_key.pub)
+privkey=$(cat azureuser_key)
+pubkey=$(cat azureuser_key.pub)
 
 az group create --name $rg --location "$location"
 az deployment group create --name blanktemplate --resource-group $rg --template-file HAtemp.jsonc \
-     --parameters parameters.json --parameters privkey="$priv_key" --parameters pubkey="$pubkey"
+     --parameters parameters.json --parameters privkey="$privkey" --parameters pubkey="$pubkey"
 ```
