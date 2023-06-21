@@ -1,9 +1,9 @@
 # hatemplate
 
-Deploy an HA Suse cluster template 
+Deploy an HA SLES15 cluster template 
 
 
-The HAtemp.json file is an annotated version of the template but it does not pass syntax checks for a JSON document, in order to make use of it execute the following series of commands:
+The HAtemp.json file is an annotated version of the template but it does not pass syntax checks for a JSON document, the HAtemp.jsonc is an annotated version of the template and can be deployed using the following commands.
 
 ```
 export rg=clusterrg
