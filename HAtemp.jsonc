@@ -711,6 +711,7 @@
         "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'),copyIndex()))]",
         "[resourceId('Microsoft.Compute/disks','sbd0')]",
         "[resourceId('Microsoft.Compute/disks',concat('dataDisk',copyIndex()))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName'))]"
       ]
     },
@@ -846,6 +847,9 @@
           ]
         }
     
+      ],
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/disks','sbd0')]"
       ]
     },
 
