@@ -424,7 +424,7 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', concat('jumphost_',variables('nicName')))]",
-        "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}',parameters('vmname'),0))]",
+        "[resourceId('Microsoft.Compute/virtualMachines', format('{0}{1}',parameters('vmname'),1))]",
         "[resourceId('Microsoft.KeyVault/vaults', variables('uniqueName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('uniqueName'))]"
       ]
@@ -589,7 +589,7 @@
           {
             "properties": {
               "protocol": "Tcp",
-              "port": 80,
+              "port": 61000,
               "intervalInSeconds": 15,
               "numberOfProbes": 2
             },
@@ -705,7 +705,9 @@
       },
       "copy": {
         "name": "copyOfNodes",
-        "count": "[variables('numberOfNodes')]"
+        "count": "[variables('numberOfNodes')]",
+        "mode":  "serial",
+        "batchSize": 1
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'),copyIndex()))]",
