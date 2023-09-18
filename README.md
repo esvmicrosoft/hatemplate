@@ -9,8 +9,8 @@ The HAtemp.json file is an annotated version of the template but it does not pas
 export rg=clusterrg
 export location=eastus
 
-ssh-keygen -t rsa -b 2048 -N"" -f azureuser_key
-privkey=$(cat azureuser_key)
+ssh-keygen -t rsa -b 2048 -N "" -f azureuser_key
+privkey=$(base64 -w0 azureuser_key)
 pubkey=$(cat azureuser_key.pub)
 myip=$(curl ident.me 2>/dev/null)
 

@@ -139,11 +139,11 @@
     },
 
     "privkey":  {
-      "type": "string"
+      "type": "securestring"
     },
 
     "pubkey":  {
-      "type": "string"
+      "type": "securestring"
     },
 
 /////////////////////////////////////
